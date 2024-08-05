@@ -12,18 +12,23 @@ IY	i
 UH	ʊ
 UW	u
 
+
+dipthongs [5] (-> with re-mapping)
+AW  aʊ  ->  AU* UH
+AY  aɪ  ->  AU* IH
+EY  eɪ  ->  EE* IH
+OW  oʊ  ->  OH* UH
+OY  ɔɪ  ->  OH* IH
+
+~~~
+
+* IPA vowels used in dipthongs not contained in ARPABET, with my custom mappings
+
 AU  a *
 EE  e *
 OH  o *
 
-dipthongs [5]
-AW  aʊ  ->  AU UH
-AY  aɪ  ->  AU IH
-EY  eɪ  ->  EE IH
-OW  oʊ  ->  OH UH
-OY  ɔɪ  ->  OH IH
 
-* IPA vowels used in dipthongs not contained in ARPABET, with my custom mappings
 a   ->  AU
 e   ->  EE
 o   ->  OH
