@@ -2,9 +2,20 @@
 #include <fstream>
 #include <string>
 #include <regex>
+#include <map>
 #include <unordered_map>
 #include <unordered_set>
 #include <sstream>
+
+// type aliases
+
+using Words = std::vector<std::string>;
+using Pronunciations = std::vector<std::string>;
+using Dictionary = std::unordered_map<std::string, Pronunciations>;
+using PronunciationArray = std::vector<std::pair<std::string, Pronunciations>>;
+using VowelMap = std::unordered_map<std::string, std::string>;
+using VowelSet = std::unordered_set<std::string>;
+
 
 const std::unordered_set<std::string> cmuVowels = {
     "AA", "AE", "AH", "AO", "EH",
@@ -31,21 +42,78 @@ int countVowels(const std::string& pronunciation) {
 }
 
 //returns an unordered_set of vowels from a pronunciation
-std::unordered_set<std::string> listVowels(std::string& pronunciation) {
+VowelSet listVowels(const std::string& pronunciation) {
     std::istringstream iss(pronunciation);
     std::string symbol{};
-    std::unordered_set<std::string> vowel_list{};
+    VowelSet vowel_set{};
     
     while (iss >> symbol) {
         if (!symbol.empty() && std::isdigit(symbol.back())) {
             symbol.pop_back();
         }
         if(cmuVowels.find(symbol) != cmuVowels.end()) {
-            vowel_list.insert(symbol);
+            vowel_set.insert(symbol);
         }
     }
 
-    return vowel_list;
+    return vowel_set;
+
+}
+
+void testQuery(const std::string& query, const Dictionary& dictionary) {
+    auto it = dictionary.find(query);
+    if (it != dictionary.end()) {
+        std::cout << query << ":" << std::endl;
+        for (const auto& transcription : it->second) {
+            std::cout << transcription << std::endl;
+            std::cout << "vowel count: " << countVowels(transcription) << std::endl;
+            auto set{listVowels(transcription)};
+            std::cout << "contains these vowels:";
+            for (const auto& a : set) {
+                std::cout << ' ' << a;
+            }
+            std::cout << std::endl;
+        }
+    } else {
+        std::cout << query << " not found in the dictionary." << std::endl;
+    }
+    
+}
+
+std::string getUserText(){
+    std::cout << "Input text: ";
+    std::string input{};
+    std::getline(std::cin, input);
+    return input;
+}
+
+Words splitTextToWords(const std::string& text) {
+    std::istringstream iss(text);
+    std::string word{};
+    Words words{};
+
+    while (iss >> word) {
+        words.push_back(word);
+    }
+
+    return words;
+}
+
+PronunciationArray wordsToPronunciations(Words words, Dictionary dictionary) {
+    PronunciationArray pronunciation_array{};
+    for (const auto& word : words) {
+        Pronunciations pronunciations{};
+        auto it = dictionary.find(word);
+        if (it!= dictionary.end()) {
+            for (const auto& pronunciation : it->second) {
+                pronunciations.emplace_back(pronunciation);
+            }
+        }
+        pronunciation_array.emplace_back(word, pronunciations);
+    }
+
+    return pronunciation_array;
+
 
 }
 
@@ -103,23 +171,49 @@ int main()
 
     // test example
 
-    std::string query{"FINANCE"};
-    auto it = dictionary.find(query);
-    if (it != dictionary.end()) {
-        std::cout << query << ":" << std::endl;
-        for (const auto& transcription : it->second) {
-            std::cout << transcription << std::endl;
-            std::cout << "vowel count: " << countVowels(transcription) << std::endl;
-        }
-    } else {
-        std::cout << query << " not found in the dictionary." << std::endl;
-    }
+    testQuery("FINANCE", dictionary);
+
 
     // define a vowel transformation
 
+    // here's my test that compresses all vowels to "UH"
+    
+    VowelMap test_transformation{
+        {"AA", "UH"},
+        {"AE", "UH"},
+        {"AH", "UH"},
+        {"AO", "UH"},
+        {"EH", "UH"},
+        {"ER", "UH"},
+        {"IH", "UH"},
+        {"IY", "UH"},
+        {"UH", "UH"},
+        {"UW", "UH"},
+        {"AW", "UH"},
+        {"AY", "UH"},
+        {"EY", "UH"},
+        {"OW", "UH"},
+        {"OY", "UH"},
+
+    };
+
+
     // get user-text
 
+    std::string user_text{getUserText()};
+    auto words{splitTextToWords(user_text)};
     // check each word against dict, get pronunciation
+
+    PronunciationArray pronunciation_array{wordsToPronunciations(words, dictionary)};
+
+    // test print out array
+
+    for (const auto& pair : pronunciation_array) {
+        std::cout << pair.first << ":" << std::endl;
+        for (const auto& a : pair.second) {
+            std::cout << a << std::endl;
+        }
+    }
 
     // what to do with words not found in dict
 
