@@ -11,14 +11,34 @@
 #include <unordered_map>
 #include <unordered_set>
 
+
+
+
+
 // type aliases
 
 
-using Dictionary = std::unordered_map<std::string, std::vector<std::string>>;
-// array of pairs, pair.first is the word pair.second is pronunciations
-using PronunciationArray = std::vector<std::pair<std::string, std::vector<std::string>>>;
-// map of arpa vowels from pair.first to pair.second for pair in VowelMap
+
+// map of arpa vowels from pair.first to pair.second for pair in VowelMap, needs to be alphabetical by pair.first
 using VowelMap = std::vector<std::pair<std::string, std::string>>;
+/* for VowelMap
+VowelMap compress_to_ah{
+        {"AA", "AH"},
+        {"AE", "AH"},
+        {"AH", "AH"},
+        {"AO", "AH"},
+        {"AW", "AH"},
+        {"AY", "AH"},
+        {"EH", "AH"},
+        {"ER", "AH"},
+        {"EY", "AH"},
+        {"IH", "AH"},
+        {"IY", "AH"},
+        {"OW", "AH"},
+        {"OY", "AH"},
+        {"UH", "AH"},
+        {"UW", "AH"},
+    };*/
 
 
 // All vowels used in CMU
@@ -43,7 +63,7 @@ std::size_t arpaToIndex(const std::string symbol) {
     throw std::runtime_error(symbol + " not found in vowel list");
 }
 
-std::string checkSymbol(const std::string& symbol) {
+std::string respellArpa(const std::string& symbol) {
     std::unordered_map<std::string, std::string> respelling_map = {
         {"AA", "aw"},
         {"AE", "ah"},
@@ -90,30 +110,12 @@ std::string checkSymbol(const std::string& symbol) {
     return respelling_map.at(symbol);
 }
 
-// TODO handle accents
-std::string arpaRespell(const std::string& pronunciation) {
-    std::string respelling{};
-    
-    std::istringstream iss(pronunciation);
-    std::string symbol;
-    while (iss >> symbol) {
-        std::string accent{};
-        // check vowel, pop accent;
-        if (!symbol.empty() && std::isdigit(symbol.back())) {
-            accent = symbol.back();
-            symbol.pop_back();
-        }
-        respelling += checkSymbol(symbol);
-    }
-
-    return respelling;
-}
-
 
 
 class CMU_Dict {
 private:
-    Dictionary m_dictionary {};
+    // map of words with CMU pronunciations
+    std::unordered_map<std::string, std::vector<std::string>> m_dictionary {};
 
 public:
     bool import_dictionary(std::string file_path) {
@@ -155,7 +157,9 @@ public:
     }
 
     // throws a std::exception if query not found
-    std::vector<std::string> search_dictionary(const std::string& query) {
+    std::vector<std::string> search_dictionary(std::string query) {
+        // capitalize all queries
+        std::transform(query.begin(), query.end(), query.begin(), ::toupper);
         auto it = m_dictionary.find(query);
         if (it != m_dictionary.end()) {
             return it->second;
@@ -187,91 +191,172 @@ public:
 
         return vowel_count;
     }
-
-    std::vector<std::string> deform(PronunciationArray pronunciations, VowelMap deformation) {
-        // PronunciationArray deformed_array{};
-        std::vector<std::string> deformed_array{};
-
-        for (auto pair : pronunciations) {
-            // take the first pronunciation, if there are multiple
-            std::istringstream iss(pair.second[0]);
-            std::string symbol;
-            std::string deformed_arpa{};
-
-            while (iss >> symbol) {
-                // record and remove vowel accent
-                std::string accent{};
-                // also functions as an if vowel
-                if (!symbol.empty() && std::isdigit(symbol.back())) {
-                    accent = symbol.back();
-                    symbol.pop_back();
-                    
-                    // get vowel index, index into the deformation
-                    std::size_t index = arpaToIndex(symbol);
-                    std::string new_vowel{deformation[index].second};
-                    deformed_arpa += deformation[index].second + accent + " ";
-
-                }
-                // if not a vowel
-                else {
-                    deformed_arpa += symbol + " ";
-                }
-            }
-            deformed_array.emplace_back(deformed_arpa);
-
-        }
-
-        return deformed_array;
-    }
-
-    // TODO handle punctuation and capitalization and numbers, etc!
-    // unknown words are skipped
-    PronunciationArray words_to_pronunciations(std::vector<std::string> words) {
-        PronunciationArray pronunciation_array{};
-        for (const auto& word : words) {
-            try {
-                pronunciation_array.emplace_back(word, search_dictionary(word));
-            }
-            catch(const std::exception& exception) {
-                std::cerr << exception.what() << " Word will be skipped." << '\n';
-            }
-        }
-
-        return pronunciation_array;
-    }
 };
 
-std::string getUserText(){
-    std::cout << "Input text: ";
-    std::string input{};
-    std::getline(std::cin, input);
-    return input;
-}
-
-std::vector<std::string> splitTextToWords(const std::string& text) {
-    std::istringstream iss(text);
+struct Word {
     std::string word{};
-    std::vector<std::string> words{};
+    std::string punct_prefix{};
+    std::string punct_suffix{};
+    std::vector<std::string> pronunciations{};
+    std::vector<std::string> deformed_pronunciations{};
+    std::vector<std::string> respellings{};
+    std::vector<std::string> deformed_respellings{};
+};
 
-    while (iss >> word) {
-        words.push_back(word);
+class Text {
+private:
+    std::string m_user_text{};
+    std::vector<Word> m_words{};
+
+public:
+    void printDeformedRespelling(){
+        for (auto& word : m_words) {
+            if (word.pronunciations.empty()) {
+                std::cout << word.punct_prefix << word.word << word.punct_suffix << ' ';
+            }
+            else {
+                std::cout << word.punct_prefix << word.deformed_respellings.at(0) <<  word.punct_suffix << ' ';
+            }
+            
+        }
+        std::cout << '\n';
+    }
+    // TODO error verification
+    bool getUserText(){
+        std::cout << "Input text: ";
+        std::string input{};
+        std::getline(std::cin, input);
+        m_user_text = input;
+        return true;
+    }
+    bool splitUserText() {
+        std::istringstream iss(m_user_text);
+        std::string word{};
+
+        while (iss >> word) {
+            // deal with punctuation :,./()-]
+            // regex match for words
+            std::regex words_regex("[a-zA-Z]+");
+            auto words_begin =
+            std::sregex_iterator(word.begin(), word.end(), words_regex);
+            auto words_end = std::sregex_iterator();
+            
+            std::string match_suffix{};
+            std::vector<Word> temp_words{};
+
+            // iterate thru matches
+            for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+                std::smatch match = *i;
+                std::string match_str = match.str();
+                std::string match_prefix = match.prefix();
+                match_suffix = match.suffix();
+                // add prefix and word to array
+                Word temp {match_str, match_prefix};
+                temp_words.emplace_back(temp);
+            }
+            // add the remaining suffix to the last word match (only would come into place in strange cases, e.g. "dilly-dally.")
+            temp_words.back().punct_suffix = match_suffix;
+
+
+            m_words.insert(m_words.end(), temp_words.begin(), temp_words.end());
+        }
+        return true;
     }
 
-    return words;
-}
+    // unknown words are skipped
+    std::vector<std::string> getPronunciation(const std::string& query, CMU_Dict& dict){
+        std::vector<std::string> pronunciation{};
 
+        try {
+            pronunciation = dict.search_dictionary(query);
+        }
+        catch(const std::exception& exception) {
+            std::cerr << exception.what() << " Word will be skipped." << '\n';
+        }
+
+        return pronunciation;
+        
+        
+    }
+
+    std::string deform(const std::string& arpa, VowelMap vowel_map) {
+        std::istringstream iss(arpa);
+        std::string symbol;
+        std::string deformed_arpa{};
+
+        while (iss >> symbol) {
+            // record and remove vowel accent
+            std::string accent{};
+            // also functions as an if vowel
+            if (!symbol.empty() && std::isdigit(symbol.back())) {
+                accent = symbol.back();
+                symbol.pop_back();
+                
+                // get vowel index, index into the deformation
+                std::size_t index = arpaToIndex(symbol);
+                deformed_arpa += vowel_map[index].second + accent + " ";
+
+            }
+            // if not a vowel
+            else {
+                deformed_arpa += symbol + " ";
+            }
+        }
+        return deformed_arpa;
+
+    }
+
+    // TODO handle accents
+    std::string respell(const std::string& pronunciation) {
+        std::string respelling{};
+        std::istringstream iss(pronunciation);
+        std::string symbol;
+        while (iss >> symbol) {
+            std::string accent{};
+            // check vowel, pop accent;
+            if (!symbol.empty() && std::isdigit(symbol.back())) {
+                accent = symbol.back();
+                symbol.pop_back();
+            }
+            respelling += respellArpa(symbol);
+        }
+        return respelling;
+    }
+
+    
+
+    bool init(CMU_Dict& dict, VowelMap vowel_map) {
+        getUserText();
+        splitUserText();
+    
+        for (auto& word: m_words) {
+            word.pronunciations = getPronunciation(word.word, dict);
+
+
+            for (auto& instance : word.pronunciations) {
+                // respell each pronunciation
+                word.respellings.emplace_back(respell(instance));
+                // deform each pronunciation
+                word.deformed_pronunciations.emplace_back(deform(instance, vowel_map));
+                // respell each deformed pronunciation
+                word.deformed_respellings.emplace_back(respell(word.deformed_pronunciations.back()));
+            }
+
+        }
+
+        return true;
+    }
+};
 
 int main()
 {
     // open CMU dict
 
-    CMU_Dict cmu_dict{};
+    CMU_Dict dict{};
 
-    cmu_dict.import_dictionary("../data/cmudict-0.7b");
+    dict.import_dictionary("../data/cmudict-0.7b");
 
     // define a vowel transformation
-
-    // here's my test that compresses all vowels to "UH"
     
     VowelMap compress_to_ah{
         {"AA", "AH"},
@@ -291,26 +376,11 @@ int main()
         {"UW", "AH"},
     };
 
-    // get user-text
-    std::vector<std::string> user_words{splitTextToWords(getUserText())};
+    Text text{};
 
-    // get pronunciation array from user text
-    PronunciationArray user_pronunciations{cmu_dict.words_to_pronunciations(user_words)};
+    text.init(dict, compress_to_ah);
 
-    // get deformed text
-    std::vector<std::string> deformed_text{cmu_dict.deform(user_pronunciations, compress_to_ah)};
-
-    // transform ARPABET -> pronouncable text
-    std::vector<std::string> deformed_text_respelled{};
-    for (const auto& word : deformed_text){
-        deformed_text_respelled.emplace_back(arpaRespell(word));
-    }
-
-    // Print it
-    for (const auto& word : deformed_text_respelled) {
-        std::cout << word << " ";
-    }
-    std::cout << std::endl;
+    text.printDeformedRespelling();
 
     return 0;
 }
