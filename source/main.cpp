@@ -376,9 +376,27 @@ int main()
         {"UW", "AH"},
     };
 
+    VowelMap lr_mirror{
+        {"AA", "AE"},
+        {"AE", "AA"},
+        {"AH", "AH"},
+        {"AO", "EH"},
+        {"AW", "AY"},
+        {"AY", "AW"},
+        {"EH", "AO"},
+        {"ER", "AH"},
+        {"EY", "OW"},
+        {"IH", "UH"},
+        {"IY", "UW"},
+        {"OW", "EY"},
+        {"OY", "AH"},
+        {"UH", "IH"},
+        {"UW", "IY"},
+    };
+
     Text text{};
 
-    text.init(dict, compress_to_ah);
+    text.init(dict, lr_mirror);
 
     text.printDeformedRespelling();
 
