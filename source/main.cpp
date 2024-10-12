@@ -110,6 +110,30 @@ std::string respellArpa(const std::string& symbol) {
     return respelling_map.at(symbol);
 }
 
+// Note that this DOES NOT include diphtongs AW, AY, EY, OW, OY
+// And instead includes my inventeions AU, EE, OH, to represent IPA a, e, o, respectively
+enum class ARPAbetVowels{
+    AA, AE, AH, AO, EH,
+    ER, IH, IY, UH, UW, // 10 monopthongs
+    AU, EE, OH          // 3 invented vowels only used in dipthongs
+};
+
+// store vowel and f1, f2 values
+struct Vowel {
+    ARPAbetVowels arpabet{};
+    double f1{};
+    double f2{};
+};
+
+class VowelSpace {
+private:
+    std::vector<Vowel> m_vowels {};
+
+public:
+      
+};
+
+
 
 
 class CMU_Dict {
