@@ -1,3 +1,5 @@
 .DS_Store
 build/
 /.vscode
+/external/nlohmann/json.hpp
+/external/nlohmann/json_fwd.hpp
